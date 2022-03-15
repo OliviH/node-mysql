@@ -1,0 +1,44 @@
+version: '3.8'
+
+services: 
+  mariadb:
+    container_name: $MARIADB_CONTAINER_NAME
+    image: mariadb:10.8.2-rc
+    restart: always
+    env_file: ./.env
+    environment:
+      MARIADB_ROOT_PASSWORD: $MARIADB_ROOT_PASSWORD
+      MARIADB_DATABASE: $MARIADB_DATABASE
+    volumes: 
+      - ./DATAS/etc/mysql:/etc/mysql
+      - ./DATAS/var/lib/mysql:/var/lib/mysql
+      - ./DATAS/db/backup/files/:/data_backup/data
+    networks:
+      - networkName
+
+  nodeapp:
+    container_name: $ENGINE_NAME
+    build: ./engine
+    image: node:alpine3.15
+    restart: always
+    env_file: ./.env
+    volumes:
+      - ./engine/src:/app/src
+      - ./DATAS/var/lib/app:/var/lib/app
+    environment:
+      - MARIADB_ROOT_PASSWORD=$MARIADB_ROOT_PASSWORD
+      - MARIADB_DATABASE=$MARIADB_DATABASE
+
+  # OPTIONNAL
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - $ADMINER_PORT:8080
+    networks:
+      - networkName
+
+networks:
+  networkName:
+    name: $NETWORK_NAME
+    driver: bridge
