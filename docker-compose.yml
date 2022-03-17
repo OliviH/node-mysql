@@ -15,6 +15,13 @@ services:
       - ./DATAS/db/backup/files/:/data_backup/data
     networks:
       - networkName
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${NETWORK_NAME}"
+      - "traefik.tcp.routers.${PROJECT_NAME}_db.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.${PROJECT_NAME}_db.entrypoints=${MARIADB_CONTAINER_NAME}"
+      - "traefik.tcp.routers.${PROJECT_NAME}_db.service=${PROJECT_NAME}_db-proxy"
+      - "traefik.tcp.services.${PROJECT_NAME}_db-proxy.loadbalancer.server.port=3306"
 
   nodeapp:
     container_name: $ENGINE_NAME
@@ -22,12 +29,24 @@ services:
     image: node:alpine3.15
     restart: always
     env_file: ./.env
+    networks:
+      - networkName    
+    depends_on:
+      - mariadb 
     volumes:
       - ./engine/src:/app/src
       - ./DATAS/var/lib/app:/var/lib/app
     environment:
       - MARIADB_ROOT_PASSWORD=$MARIADB_ROOT_PASSWORD
       - MARIADB_DATABASE=$MARIADB_DATABASE
+      - HOST=$HOST
+      - HOST_DB=$MARIADB_CONTAINER_NAME
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.${PROJECT_NAME}_web.loadbalancer.server.port=${PORT}"
+      - "traefik.http.routers.${PROJECT_NAME}_web.entrypoints=http"
+      - "traefik.http.routers.${PROJECT_NAME}_web.rule=Host(`${HOST}`)"
 
   # OPTIONNAL
   adminer:
